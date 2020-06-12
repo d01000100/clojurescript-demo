@@ -41,6 +41,8 @@
           spaces))
 
 (defn generate-ship
+  "Generates collections of coordinates where a ship of `type` would
+   be starting in `start` and placed with `orientation` (:horizontal or :vertical)"
   [start orientation type]
   (let [length (length-by-type type)]
     (take length
@@ -51,6 +53,9 @@
             (iterate (fn [[i j]] [i (inc j)]) start)))))
 
 (defn add-ship
+  "Adds a ship of `type` to the map `ships` in a random location
+   and orientation.
+   Keeps trying until it fits. If it doesn't fit it will loop."
   [ships type]
   (let [start (rand-nth all-coords)
         orientation (rand-nth [:vertical :horizontal])
@@ -65,7 +70,9 @@
 (def app-state
   (atom {:reveal-ships? false}))
 
-(defn reset-game! []
+(defn reset-game! 
+  "Initializes the `app-state` to a new game."
+  []
   (swap! app-state
          #(-> %
               (assoc :moves #{})
@@ -74,7 +81,10 @@
 
 (reset-game!)
 
-(defn fire! [i j]
+(defn fire! 
+  "Fires at coordinate (`i`,`j`). 
+   Adds the coordinate to `app-state` and increments the counter"
+  [i j]
   (when-not (get-in (:moves @app-state) [i j])
     (swap! app-state
            (fn [state]
@@ -84,7 +94,9 @@
                 ;;  (update-in [:ships i] dissoc j)
                  )))))
 
-(defn ships-remaining []
+(defn ships-remaining 
+  "Returns the types of ship that remain (as a set)"
+  []
   (let [ships (:ships @app-state)
         moves (:moves @app-state)]
     (->> (reduce (fn [ships [i j]] (update ships i dissoc j)) ships moves)
@@ -92,7 +104,12 @@
          (mapcat vals)
          (into #{}))))
 
-(defn tile [i j]
+(defn tile 
+  "Renders a tile of the board.
+   Changes color and content according to:
+   - If there's a ship in that tile
+   - If the player has tried that tile"
+  [i j]
   (let [ship? (get-in (:ships @app-state) [i j])
         move? (contains? (:moves @app-state) [i j])
         value (if (:reveal-ships? @app-state)
@@ -118,6 +135,8 @@
          [tile i j])])]])
 
 (defn show-ships
+  "Component that shows the player the types of ships
+   and which ones remain on the map."
   []
   (let [types (ships-remaining)
         crossed {:style {:text-decoration :line-through}}]
