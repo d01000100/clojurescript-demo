@@ -1,0 +1,11 @@
+#board {
+    width: 50%;
+    border-collapse: collapse;
+}
+
+#board td {
+    border: 1px solid black;
+    font-size: 40px;
+    text-align: center;
+    width: 20%;
+}
