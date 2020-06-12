@@ -58,12 +58,12 @@
                   (and ship? move?) "X"
                   move? "O"
                   :else "?")
-        color (cond
-                (and ship? move?) :red
-                move? :blue
-                :else "#AAAAAA")]
+        class (cond
+                (and ship? move?) :hit
+                move? :miss
+                :else :unexplored)]
     [:td {:on-click #(fire! i j)
-          :style {:background-color color}}
+          :class class}
      value]))
 
 (defn board []

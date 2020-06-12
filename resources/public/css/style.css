@@ -1,3 +1,19 @@
+html {
+    background-color: #56baf5;
+}
+
+.unexplored {
+    background-color: #025bb5;
+}
+
+.hit {
+    background-color: #c49a02;
+}
+
+.miss {
+    background-color: #757575;
+}
+
 #board {
     width: 50%;
     border-collapse: collapse;
