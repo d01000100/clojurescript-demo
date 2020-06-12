@@ -14,14 +14,31 @@ html {
     background-color: #757575;
 }
 
-#board {
+.board {
     width: 50%;
     border-collapse: collapse;
 }
 
-#board td {
+.board td {
     border: 1px solid black;
     font-size: 40px;
     text-align: center;
     width: 20%;
+}
+
+.show-ships {
+    text-align: left;
+}
+
+.show-ships table {
+    border-collapse: collapse;
+    display: inline;
+    margin-right: 10px;
+}
+
+.show-ships table td {
+    border: 1px solid black;
+    font-size: 18px;
+    text-align: center;
+    width: 20px;
 }

@@ -32,7 +32,7 @@
    of the other `ships` and fits in the board. 
    [ships spaces]"
   [ships spaces]
-  (every? (fn [[i j :as coords]] 
+  (every? (fn [[i j :as coords]]
             (and (<= 0 i)
                  (< i board-width)
                  (<= 0 j)
@@ -59,26 +59,18 @@
       (reduce (fn [ships coord] (assoc-in ships coord type)) ships ship-spaces)
       (add-ship ships type))))
 
-(defn generate-board [width height n-ships]
-  (let [coords (for [i (range width)
-                     j (range height)]
-                 [i j])
-        board (into [] (repeat width (into [] (repeat height nil))))
-        ships-positions (into #{} (take n-ships (shuffle coords)))]
-    {:ships (reduce (fn [board coord]
-                      (assoc-in board coord (contains? ships-positions coord)))
-                    board coords)
-     :ships-pos ships-positions}))
+(defn generate-board []
+  (reduce add-ship {} ships))
 
 (def app-state
-  (atom {}))
+  (atom {:reveal-ships? false}))
 
 (defn reset-game! []
   (swap! app-state
          #(-> %
-              (dissoc :moves)
+              (assoc :moves #{})
               (assoc :tries 0)
-              (merge (generate-board 5 5 6)))))
+              (assoc :ships (generate-board)))))
 
 (reset-game!)
 
@@ -87,28 +79,28 @@
     (swap! app-state
            (fn [state]
              (-> state
-                 (assoc-in [:moves i j] 1)
-                 (update :tries inc))))))
+                 (update :moves conj [i j])
+                 (update :tries inc)
+                ;;  (update-in [:ships i] dissoc j)
+                 )))))
 
 (defn ships-remaining []
   (let [ships (:ships @app-state)
-        moves (:moves @app-state)
-        board-width (count ships)
-        board-height (count (first ships))
-        coords (for [i (range board-width)
-                     j (range board-height)]
-                 [i j])]
-    (->> coords
-         (filter #(and (get-in ships %) (not (get-in moves %))))
-         count)))
+        moves (:moves @app-state)]
+    (->> (reduce (fn [ships [i j]] (update ships i dissoc j)) ships moves)
+         vals
+         (mapcat vals)
+         (into #{}))))
 
 (defn tile [i j]
   (let [ship? (get-in (:ships @app-state) [i j])
-        move? (get-in (:moves @app-state) [i j])
-        value (cond
-                (and ship? move?) "X"
-                move? "O"
-                :else "?")
+        move? (contains? (:moves @app-state) [i j])
+        value (if (:reveal-ships? @app-state)
+                (if ship? "X" "O")
+                (cond
+                  (and ship? move?) "X"
+                  move? "O"
+                  :else "?"))
         class (cond
                 (and ship? move?) :hit
                 move? :miss
@@ -118,28 +110,65 @@
      value]))
 
 (defn board []
-  (let [ships (:ships @app-state)
-        board-width (count ships)
-        board-height (count (first ships))]
-    [:table#board
-     [:tbody
-      (for [i (range board-width)]
-        [:tr
-         (for [j (range board-height)]
-           [tile i j])])]]))
+  [:table.board
+   [:tbody
+    (for [i (range board-width)]
+      [:tr
+       (for [j (range board-height)]
+         [tile i j])])]])
 
+(defn show-ships
+  []
+  (let [types (ships-remaining)
+        crossed {:style {:text-decoration :line-through}}]
+    [:div.show-ships
+     [:p "Ships remaining:"]
+     [:table
+      [:tr
+       (repeat 4 [:td.unexplored "X"])]]
+     [:span (when (not (contains? types :large)) crossed)
+      "Large ship"]
+     [:br]
+     [:table
+      [:tr
+       (repeat 3 [:td.unexplored "X"])]]
+     [:span (when (not (contains? types :medium)) crossed)
+      "Medium ship"]
+     [:br]
+     [:table
+      [:tr
+       (repeat 2 [:td.unexplored "X"])]]
+     [:span (when (not (contains? types :small)) crossed)
+      "Small ship"]]))
+
+(defn instructions
+  []
+  [:div
+   [:table
+    [:tr
+     [:td {:style {:padding-right "5%"}}
+      [:p "There are three ships of different sizes hidden in the board."
+       [:br] "Click on a tile to shoot and reveal what it's in it."
+       [:br] "X means you hit and O means you missed."]
+      [:p "You have shot " [:strong (or (:tries @app-state) "0")] " times"]]
+     [:td
+      [show-ships]]]]])
+
+(defn controls []
+  [:div
+   [:p [:button {:on-click reset-game!}
+        "Reset Game"]
+    [:input {:type :checkbox
+             :id "reveal-ships"
+             :value (:reveal-ships? @app-state)
+             :on-change #(swap! app-state update :reveal-ships? not)}]
+    [:label {:for "reveal-ships"} "Reveal ships"]]])
 
 (defn page []
   [:center#page
    [:h1 "Battlefield Mockup"]
-    ;;  [:p (pr-str @app-state)]
-   [:p "Each tile may contain a ship."
-    [:br] " Click on it to shoot and reveal what it's inside."
-    [:br] "X means you hit and O means you missed."]
-   [:p (str "You have shot " (or (:tries @app-state) "0") " times")]
-   [:p (str "There are " (ships-remaining) " ships remaining")]
-   [:p [:button {:on-click reset-game!}
-        "Reset Game"]]
+   [instructions]
+   [controls]
    [board]])
 
 (rd/render [page]
