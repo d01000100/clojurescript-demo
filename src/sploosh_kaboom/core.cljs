@@ -3,12 +3,63 @@
    [reagent.core :as reagent :refer [atom]]
    [reagent.dom :as rd]))
 
-(println "This text is printed from src/sploosh-kaboom/core.cljs. Go ahead and edit it and see reloading in action.")
+;; Ships
+;; {3 {2 :small}
+;;     3 :small}
+;;  1 {2 :medium}
+;;  2 {1 :medium}
+;;  3 {0 :medium}}
+;;  
+;; Shots
+;; {0 {0 true
+;;     1 true}
+;;  3 {2 true}}
 
-;; define your app data so that it doesn't get over-written on reload
+(def board-width 5)
+(def board-height 5)
+(def ships #{:large :medium :small})
+(def all-coords (for [i (range board-width)
+                      j (range board-height)]
+                  [i j]))
 
-(defn generate-board
-  [width height n-ships]
+(def length-by-type
+  {:small 2
+   :medium 3
+   :large 4})
+
+(defn ship-fits?
+  "Checks if ship that occupies `spaces` doesn't collide with any
+   of the other `ships` and fits in the board. 
+   [ships spaces]"
+  [ships spaces]
+  (every? (fn [[i j :as coords]] 
+            (and (<= 0 i)
+                 (< i board-width)
+                 (<= 0 j)
+                 (< j board-height)
+                 (not (get-in ships coords))))
+          spaces))
+
+(defn generate-ship
+  [start orientation type]
+  (let [length (length-by-type type)]
+    (take length
+          (case orientation
+            :horizontal
+            (iterate (fn [[i j]] [(inc i) j]) start)
+            :vertical
+            (iterate (fn [[i j]] [i (inc j)]) start)))))
+
+(defn add-ship
+  [ships type]
+  (let [start (rand-nth all-coords)
+        orientation (rand-nth [:vertical :horizontal])
+        ship-spaces (generate-ship start orientation type)]
+    (if (ship-fits? ships ship-spaces)
+      (reduce (fn [ships coord] (assoc-in ships coord type)) ships ship-spaces)
+      (add-ship ships type))))
+
+(defn generate-board [width height n-ships]
   (let [coords (for [i (range width)
                      j (range height)]
                  [i j])
@@ -28,7 +79,7 @@
               (dissoc :moves)
               (assoc :tries 0)
               (merge (generate-board 5 5 6)))))
-  
+
 (reset-game!)
 
 (defn fire! [i j]
@@ -55,9 +106,9 @@
   (let [ship? (get-in (:ships @app-state) [i j])
         move? (get-in (:moves @app-state) [i j])
         value (cond
-                  (and ship? move?) "X"
-                  move? "O"
-                  :else "?")
+                (and ship? move?) "X"
+                move? "O"
+                :else "?")
         class (cond
                 (and ship? move?) :hit
                 move? :miss
